@@ -1,32 +1,64 @@
 # Chain Commands
 
-Run several commands from a single line. Type `/chain`, separate your commands with `&&`, and they run one after another.
+Run several commands from one line, with conditions, piping, waiting and loops. Type `/chain`, separate your commands with operators, and they run in order.
 
 ```
 /chain gamemode creative && time set day && weather clear
 ```
 
-No more pasting commands one at a time, and no command blocks needed for quick setups.
+No command blocks needed for quick setups, and no datapack needed for simple logic.
 
 ## Features
 
-- **One-line chaining**: `/chain <command> && <command> && <command>`
-- **Quote-aware**: an `&&` inside double quotes is left alone, so text stays intact:
-  `/chain say "fish && chips" && say done`
-- **Escapable**: write `\&&` for a literal `&&` outside quotes
-- **Permission-safe**: every command runs as you, and each one is permission-checked on its own. `/chain` can't run anything you couldn't run by hand
-- **Forgiving**: if one command fails, the rest still run
-- **Optional leading slashes**: `/chain /say hi && /say there` works too
-- **Lightweight**: one command, no config files, no extra dependencies beyond Fabric API
+- **Chaining with success/failure control**: `&&` (next only if it worked), `||` (next only if it failed), `;;` (always)
+- **Stop on failure**: failed `&&` steps skip the rest, `strict` mode halts the whole chain on the first failure, and `stop` ends it on demand
+- **If / elif / else**: `if <command> then ... else ... end`, plus `unless` and a `compare` test for numbers and text
+- **Piping**: send one command's output into the next with `|`, or drop it **anywhere** with `{out}`, `{result}` and `{num}`
+- **Reach back**: `{out2}` and `{result3}` grab the output of earlier steps
+- **Wait**: `wait 20` or `wait 1s` pauses the chain, then carries on
+- **Repeat**: `repeat 5 say hi`
+- **Dry run**: `/chain dry ...` shows how your line was split without running anything
+- **Quote- and bracket-aware**: operators inside "quotes", `[ ]` and `{ }` (NBT/JSON) are left alone
+- **Permission-safe**: every command runs as you, each one permission-checked on its own
 
-## Examples
+## Quick examples
 
-| You type | What happens |
+```
+/chain scoreboard players get @s kills | say I have {result} kills
+```
+```
+/chain if execute if entity @s[tag=vip] then say welcome back else say hello end
+```
+```
+/chain scoreboard players get @s kills ;; if compare {result} >= 10 then say pro elif compare {result} >= 5 then say good else say rookie end
+```
+```
+/chain give @s diamond || stop your inventory is full ;; say enjoy!
+```
+```
+/chain say 3 ;; wait 1s ;; say 2 ;; wait 1s ;; say 1 ;; wait 1s ;; say go!
+```
+
+## Cheat sheet
+
+| Syntax | Meaning |
 |---|---|
-| `/chain time set day && weather clear` | Sets day and clears the weather |
-| `/chain gamemode creative @a && effect give @a night_vision infinite` | Sets everyone to creative, then gives night vision |
-| `/chain say "Starting in 5 && counting"` | Sends one message (the `&&` is inside quotes) |
-| `/chain say a \&& b` | Sends `a && b` |
+| `a && b` | run `b` if `a` succeeded |
+| `a \|\| b` | run `b` if `a` failed |
+| `a ;; b` | run `b` regardless |
+| `a \| b` | like `&&`, plus pipe `a`'s output into `b` |
+| `strict ...` | stop the chain at the first failure |
+| `if C then A elif C then B else D end` | conditionals (`unless` also works) |
+| `compare a == b` | `== != < <= > >= contains` |
+| `{out}` `{result}` `{num}` | previous output text / numeric result / first number |
+| `{out2}` `{result2}` `{num2}` | the same, from the 2nd step |
+| `{out:json}` | output escaped for JSON text |
+| `wait 20` / `wait 1s` | pause (max 1 hour) |
+| `repeat 5 <command>` | run up to 5 times (max 100) |
+| `echo <text>` | message only you see |
+| `stop [message]` | end the chain |
+
+To use an operator as plain text, put it in quotes or write `\&&`, `\||`, `\;;` or `\|`. Type `/chain` on its own for an in-game reminder.
 
 ## Supported versions
 
@@ -45,13 +77,15 @@ There is a separate download for each Minecraft version. Pick the file that matc
 
 **Singleplayer:** just install it. **Servers:** install it on the server. Players joining don't need it on their client.
 
-## Notes and limitations
+## Limits and notes
 
-- A chain can hold up to 64 commands.
-- Commands run in order, right after the `/chain` command itself finishes.
-- Tab completion doesn't work inside the chained part, because Minecraft treats it as one block of text.
-- If a command fails, you'll still see its normal error message, and the next command runs.
+- Up to 128 steps, 1000 commands, 100 repeats and a 1-hour wait per chain.
+- A command counts as failed if it errors, doesn't exist, or never runs (like an `execute if` whose condition is false).
+- Output that is piped onward is hidden, unless that command failed.
+- Each nested `if` needs its own `end`. On one line, `else`, `elif` and `end` are keywords; put message text containing those words on its own `;;` step.
+- Tab completion doesn't work inside the chained part.
+- A chain that is waiting is forgotten if the server restarts.
 
-## Source and license
+## License
 
-Released under the MIT license. Bug reports and suggestions are welcome in the issue tracker.
+MIT. Bug reports and suggestions are welcome in the issue tracker.
